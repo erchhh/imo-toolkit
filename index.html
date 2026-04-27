@@ -389,7 +389,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 
 /* Reroll title for desktop pane */
 .reroll-item-title{font-family:var(--serif);font-size:18px;color:var(--gold2);font-weight:600;margin-bottom:4px}
-.reroll-item-classes{display:flex;gap:6px;margin-bottom:16px}
+.reroll-item-classes{display:flex;gap:6px;margin-bottom:4px}
+.share-btn{
+  padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+  background:var(--surface);color:var(--dim);font-family:var(--mono);
+  font-size:11px;cursor:pointer;letter-spacing:.04em;transition:all .15s;white-space:nowrap;
+}
+.share-btn:hover{border-color:var(--gold);color:var(--gold2)}
 
 /* ══ DAMAGE PAGE ═════════════════════════════════════════════════════════════ */
 .dtype-scroll{display:flex;gap:6px;padding:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -521,11 +527,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
     <!-- ── Reroll ── -->
     <div class="page" id="page-reroll">
       <div class="rr-cats" id="rr-cats">
-        <button class="cat-btn active" data-cat="boots">🥾 Boots</button>
+        <button class="cat-btn active" data-cat="weapons">⚔ Weapons</button>
         <button class="cat-btn" data-cat="helmets">🪖 Helmets</button>
-        <button class="cat-btn" data-cat="gloves">🧤 Gloves</button>
         <button class="cat-btn" data-cat="armor">🛡 Armor</button>
-        <button class="cat-btn" data-cat="weapons">⚔ Weapons</button>
+        <button class="cat-btn" data-cat="gloves">🧤 Gloves</button>
+        <button class="cat-btn" data-cat="boots">🥾 Boots</button>
       </div>
       <div class="class-filter">
         <button class="cls-btn active" data-cls="all">All</button>
@@ -768,14 +774,64 @@ document.querySelectorAll('.gold-input').forEach(el=>{
 buildLevels();buildRateTable();
 
 // ── Reroll ──
-let currentCat='boots',currentCls='all';
+let currentCat='weapons',currentCls='all';
 const CLS_LABEL={warrior:'W',ranger:'R',magician:'M',breaker:'B'};
 const CLS_CSS={warrior:'cls-w',ranger:'cls-r',magician:'cls-m',breaker:'cls-b'};
 
+function setHash(cat, itemName) {
+  const hash = itemName ? `#reroll/${cat}/${encodeURIComponent(itemName)}` : `#reroll/${cat}`;
+  history.replaceState(null, '', hash);
+}
+
+function applyHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#reroll/')) return;
+  const parts = hash.slice(1).split('/');
+  const cat = parts[1];
+  const itemName = parts[2] ? decodeURIComponent(parts[2]) : null;
+  if (cat && ALL_DATA[cat]) {
+    currentCat = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.cat === cat);
+    });
+    switchPage('reroll');
+    document.querySelectorAll('.nav-btn,.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.page === 'reroll');
+    });
+    buildItemList();
+    if (itemName) {
+      const item = ALL_DATA[cat].find(i => i.name === itemName);
+      if (item) {
+        // Select it in the list and open detail
+        setTimeout(() => {
+          const entries = document.querySelectorAll('.item-entry');
+          entries.forEach(el => {
+            if (el.querySelector('.item-name').textContent === itemName) {
+              el.classList.add('selected');
+              const html = renderDetail(item);
+              if (window.innerWidth > 640) {
+                document.getElementById('reroll-detail').innerHTML = html;
+              } else {
+                document.getElementById('detail-title').textContent = itemName;
+                document.getElementById('detail-body').innerHTML = html;
+                document.getElementById('detail-sheet').classList.add('open');
+              }
+            }
+          });
+        }, 50);
+      }
+    }
+  }
+}
+
 function renderDetail(item){
-  let html=`<div class="reroll-item-title">${item.name}</div>`;
   const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
-  html+=`<div class="reroll-item-classes">${clsTags}</div>`;
+  const shareUrl = location.origin + location.pathname + `#reroll/${currentCat}/${encodeURIComponent(item.name)}`;
+  let html=`<div class="reroll-item-title">${item.name}</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="reroll-item-classes">${clsTags}</div>
+    <button class="share-btn" onclick="copyLink('${shareUrl.replace(/'/g,"\\'")}',this)">🔗 Copy Link</button>
+  </div>`;
   item.stats.forEach(s=>{
     const maxRate=Math.max(...s.rolls.map(r=>r.rate));
     html+=`<div class="stat-card"><div class="stat-card-header"><div class="stat-name">${s.stat}</div><div class="stat-count">${s.rolls.length} values</div></div>`;
@@ -806,6 +862,7 @@ function buildItemList(){
     el.addEventListener('click',()=>{
       document.querySelectorAll('.item-entry').forEach(e=>e.classList.remove('selected'));
       el.classList.add('selected');
+      setHash(currentCat, item.name);
       const html=renderDetail(item);
       if(isMobile()){
         document.getElementById('detail-title').textContent=item.name;
@@ -827,6 +884,7 @@ document.querySelectorAll('.cat-btn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('rr-search').value='';
     document.getElementById('reroll-detail').innerHTML='<div class="rr-placeholder">← Select an item to view reroll rates</div>';
+    setHash(currentCat, null);
     buildItemList();
   });
 });
@@ -841,7 +899,19 @@ document.getElementById('rr-search').addEventListener('input',buildItemList);
 document.getElementById('detail-back').addEventListener('click',()=>{
   document.getElementById('detail-sheet').classList.remove('open');
 });
+
+// Copy link helper
+window.copyLink = function(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+};
+
 buildItemList();
+applyHash();
 
 // ── Damage ──
 let currentDtype='swords';
