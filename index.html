@@ -655,6 +655,7 @@ function switchPage(page){
   document.querySelectorAll('[data-page="'+page+'"]').forEach(b=>b.classList.add('active'));
   if(page==='damage')renderDamage(currentDtype);
   if(page==='reroll')buildItemList();
+  if(page!=='reroll') history.replaceState(null,'',location.pathname);
 }
 document.querySelectorAll('.tab-btn,.nav-btn').forEach(btn=>{
   btn.addEventListener('click',()=>switchPage(btn.dataset.page));
@@ -902,12 +903,30 @@ document.getElementById('detail-back').addEventListener('click',()=>{
 
 // Copy link helper
 window.copyLink = function(url, btn) {
-  navigator.clipboard.writeText(url).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copied!';
+  const orig = btn.textContent;
+  const finish = (ok) => {
+    btn.textContent = ok ? '✓ Copied!' : '✓ ' + url;
     btn.style.color = 'var(--green)';
-    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
-  });
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2500);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(() => finish(true)).catch(() => fallback());
+  } else {
+    fallback();
+  }
+  function fallback() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      finish(true);
+    } catch {
+      // Last resort: just show the URL
+      finish(false);
+    }
+  }
 };
 
 buildItemList();
