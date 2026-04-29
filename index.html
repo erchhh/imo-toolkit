@@ -644,18 +644,110 @@ function fmt(v){
 }
 
 // ══ DOM READY ═════════════════════════════════════════════════════════════════
+// applyHash defined globally so data script can call it
+function applyHash() {
+  const hash = location.hash;
+  if (!hash || hash === '#') return;
+  const parts = hash.slice(1).split('/');
+  const section = parts[0];
+
+  if (section === 'enchant') {
+    const type = parts[1];
+    const level = parseInt(parts[2]);
+    if (type === 'weapon' || type === 'armor') {
+      S.type = type;
+      document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    }
+    if (!isNaN(level)) S.level = level;
+    buildLevels(); buildRateTable();
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-enchant').classList.add('active');
+    document.querySelectorAll('[data-page="enchant"]').forEach(b=>b.classList.add('active'));
+    currentPage = 'enchant';
+
+  } else if (section === 'damage') {
+    const dtype = parts[1];
+    if (dtype && DAMAGE_DATA[dtype]) {
+      currentDtype = dtype;
+      document.querySelectorAll('.dtype-btn').forEach(b => b.classList.toggle('active', b.dataset.dtype === dtype));
+      renderDamage(dtype);
+    }
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-damage').classList.add('active');
+    document.querySelectorAll('[data-page="damage"]').forEach(b=>b.classList.add('active'));
+    currentPage = 'damage';
+
+  } else if (section === 'reroll') {
+    const cat = parts[1];
+    const cls = parts[2] || 'all';
+    const itemName = parts[3] ? decodeURIComponent(parts[3]) : null;
+    if (cat && ALL_DATA[cat]) {
+      currentCat = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    }
+    currentCls = cls;
+    document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === cls));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-reroll').classList.add('active');
+    document.querySelectorAll('[data-page="reroll"]').forEach(b=>b.classList.add('active'));
+    currentPage = 'reroll';
+    buildItemList();
+    if (itemName) {
+      const item = ALL_DATA[currentCat] && ALL_DATA[currentCat].find(i => i.name === itemName);
+      if (item) {
+        setTimeout(() => {
+          document.querySelectorAll('.item-entry').forEach(el => {
+            if (el.querySelector('.item-name').textContent === itemName) {
+              el.classList.add('selected');
+              openItemDetail(item);
+            }
+          });
+        }, 50);
+      }
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
 
 // ── Nav ──
 const isMobile=()=>window.innerWidth<=640;
+// ── Hash helpers ──────────────────────────────────────────────────────────────
+function updateHash() {
+  const h = location.hash.slice(1);
+  const page = h.split('/')[0];
+  // Build new hash based on current state
+  if (currentPage === 'enchant') {
+    history.replaceState(null, '', '#enchant');
+  } else if (currentPage === 'damage') {
+    history.replaceState(null, '', `#damage/${currentDtype}`);
+  } else if (currentPage === 'reroll') {
+    // reroll hash set separately via setHash()
+  }
+}
+
+function setHash(cat, cls, itemName) {
+  let hash = `#reroll/${cat}`;
+  if (cls && cls !== 'all') hash += `/${cls}`;
+  else hash += '/all';
+  if (itemName) hash += `/${encodeURIComponent(itemName)}`;
+  history.replaceState(null, '', hash);
+}
+
+let currentPage = 'enchant';
+
 function switchPage(page){
+  currentPage = page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('[data-page="'+page+'"]').forEach(b=>b.classList.add('active'));
-  if(page==='damage')renderDamage(currentDtype);
-  if(page==='reroll')buildItemList();
-  if(page!=='reroll') history.replaceState(null,'',location.pathname);
+  if (page === 'damage') { renderDamage(currentDtype); history.replaceState(null, '', `#damage/${currentDtype}`); }
+  else if (page === 'reroll') { buildItemList(); setHash(currentCat, currentCls, null); }
+  else if (page === 'enchant') { history.replaceState(null, '', '#enchant'); }
 }
 document.querySelectorAll('.tab-btn,.nav-btn').forEach(btn=>{
   btn.addEventListener('click',()=>switchPage(btn.dataset.page));
@@ -674,7 +766,7 @@ function buildLevels(){
     const b=document.createElement('button');
     b.className='lvl-btn'+(l===S.level?' active':'');
     b.textContent='+'+l;
-    b.onclick=()=>{S.level=l;buildLevels();buildRateTable();};
+    b.onclick=()=>{S.level=l;buildLevels();buildRateTable();if(currentPage==='enchant')history.replaceState(null,'','#enchant');};
     g.appendChild(b);
   }
 }
@@ -699,6 +791,7 @@ document.querySelectorAll('.seg-btn').forEach(b=>{
     S.type=b.dataset.type;
     document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');buildLevels();buildRateTable();
+    if(currentPage==='enchant')history.replaceState(null,'','#enchant');
   };
 });
 document.getElementById('tog-holy').addEventListener('change',e=>{
@@ -784,50 +877,9 @@ function setHash(cat, itemName) {
   history.replaceState(null, '', hash);
 }
 
-function applyHash() {
-  const hash = location.hash;
-  if (!hash.startsWith('#reroll/')) return;
-  const parts = hash.slice(1).split('/');
-  const cat = parts[1];
-  const itemName = parts[2] ? decodeURIComponent(parts[2]) : null;
-  if (cat && ALL_DATA[cat]) {
-    currentCat = cat;
-    document.querySelectorAll('.cat-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.cat === cat);
-    });
-    switchPage('reroll');
-    document.querySelectorAll('.nav-btn,.tab-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.page === 'reroll');
-    });
-    buildItemList();
-    if (itemName) {
-      const item = ALL_DATA[cat].find(i => i.name === itemName);
-      if (item) {
-        // Select it in the list and open detail
-        setTimeout(() => {
-          const entries = document.querySelectorAll('.item-entry');
-          entries.forEach(el => {
-            if (el.querySelector('.item-name').textContent === itemName) {
-              el.classList.add('selected');
-              const html = renderDetail(item);
-              if (window.innerWidth > 640) {
-                document.getElementById('reroll-detail').innerHTML = html;
-              } else {
-                document.getElementById('detail-title').textContent = itemName;
-                document.getElementById('detail-body').innerHTML = html;
-                document.getElementById('detail-sheet').classList.add('open');
-              }
-            }
-          });
-        }, 50);
-      }
-    }
-  }
-}
-
 function renderDetail(item){
   const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
-  const shareUrl = location.origin + location.pathname + `#reroll/${currentCat}/${encodeURIComponent(item.name)}`;
+  const shareUrl = location.origin + location.pathname + `#reroll/${currentCat}/${currentCls}/${encodeURIComponent(item.name)}`;
   let html=`<div class="reroll-item-title">${item.name}</div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
     <div class="reroll-item-classes">${clsTags}</div>
@@ -838,12 +890,23 @@ function renderDetail(item){
     html+=`<div class="stat-card"><div class="stat-card-header"><div class="stat-name">${s.stat}</div><div class="stat-count">${s.rolls.length} values</div></div>`;
     s.rolls.forEach(r=>{
       const pct=(r.rate/maxRate*100).toFixed(1);
-      const hi=r.rate>=maxRate*0.5?' high':'';
+      const hi=r.rate>=maxRate*0.5?' high':'';;
       html+=`<div class="roll-row"><div class="roll-val">${r.val}</div><div class="roll-bar-wrap"><div class="roll-bar${hi}" style="width:${pct}%"></div></div><div class="roll-rate${hi}">${r.rate.toFixed(4)}%</div></div>`;
     });
     html+='</div>';
   });
   return html;
+}
+
+function openItemDetail(item) {
+  const html = renderDetail(item);
+  if(isMobile()){
+    document.getElementById('detail-title').textContent=item.name;
+    document.getElementById('detail-body').innerHTML=html;
+    document.getElementById('detail-sheet').classList.add('open');
+  } else {
+    document.getElementById('reroll-detail').innerHTML=html;
+  }
 }
 
 function buildItemList(){
@@ -852,7 +915,7 @@ function buildItemList(){
   const data=ALL_DATA[currentCat];
   const q=document.getElementById('rr-search').value.toLowerCase();
   let shown=0;
-  data.forEach((item,idx)=>{
+  data.forEach((item)=>{
     if(q&&!item.name.toLowerCase().includes(q))return;
     if(currentCls!=='all'&&!(item.classes||[]).includes(currentCls))return;
     shown++;
@@ -863,20 +926,14 @@ function buildItemList(){
     el.addEventListener('click',()=>{
       document.querySelectorAll('.item-entry').forEach(e=>e.classList.remove('selected'));
       el.classList.add('selected');
-      setHash(currentCat, item.name);
-      const html=renderDetail(item);
-      if(isMobile()){
-        document.getElementById('detail-title').textContent=item.name;
-        document.getElementById('detail-body').innerHTML=html;
-        document.getElementById('detail-sheet').classList.add('open');
-      }else{
-        document.getElementById('reroll-detail').innerHTML=html;
-      }
+      setHash(currentCat, currentCls, item.name);
+      openItemDetail(item);
     });
     list.appendChild(el);
   });
   if(!shown)list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">No items found</div>';
 }
+
 
 document.querySelectorAll('.cat-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -885,7 +942,7 @@ document.querySelectorAll('.cat-btn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('rr-search').value='';
     document.getElementById('reroll-detail').innerHTML='<div class="rr-placeholder">← Select an item to view reroll rates</div>';
-    setHash(currentCat, null);
+    setHash(currentCat, currentCls, null);
     buildItemList();
   });
 });
@@ -893,7 +950,9 @@ document.querySelectorAll('.cls-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     currentCls=btn.dataset.cls;
     document.querySelectorAll('.cls-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');buildItemList();
+    btn.classList.add('active');
+    setHash(currentCat, currentCls, null);
+    buildItemList();
   });
 });
 document.getElementById('rr-search').addEventListener('input',buildItemList);
@@ -901,36 +960,25 @@ document.getElementById('detail-back').addEventListener('click',()=>{
   document.getElementById('detail-sheet').classList.remove('open');
 });
 
-// Copy link helper
 window.copyLink = function(url, btn) {
   const orig = btn.textContent;
   const finish = (ok) => {
-    btn.textContent = ok ? '✓ Copied!' : '✓ ' + url;
+    btn.textContent = ok ? '✓ Copied!' : url;
     btn.style.color = 'var(--green)';
     setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2500);
   };
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(url).then(() => finish(true)).catch(() => fallback());
-  } else {
-    fallback();
-  }
+  } else { fallback(); }
   function fallback() {
     try {
       const ta = document.createElement('textarea');
       ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.focus(); ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      finish(true);
-    } catch {
-      // Last resort: just show the URL
-      finish(false);
-    }
+      document.execCommand('copy'); document.body.removeChild(ta); finish(true);
+    } catch { finish(false); }
   }
 };
-
-buildItemList();
-applyHash();
 
 // ── Damage ──
 let currentDtype='swords';
@@ -945,7 +993,7 @@ function renderDamage(dtype){
   document.getElementById('dmg-note').textContent=set.note?'※ '+set.note:'';
   const thead=document.getElementById('dmg-thead');
   let hrow='<tr><th class="weapon-col">Weapon</th>';
-  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">+${c}</th>`;});
+  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">${c}</th>`;});
   thead.innerHTML=hrow+'</tr>';
   const tbody=document.getElementById('dmg-tbody');
   let html='';
@@ -960,10 +1008,15 @@ document.querySelectorAll('.dtype-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     currentDtype=btn.dataset.dtype;
     document.querySelectorAll('.dtype-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');renderDamage(currentDtype);
+    btn.classList.add('active');
+    renderDamage(currentDtype);
+    history.replaceState(null,'',`#damage/${currentDtype}`);
   });
 });
+
+buildItemList();
 renderDamage('swords');
+if(!location.hash) history.replaceState(null,'','#enchant');
 
 }); // end DOMContentLoaded
 </script>
@@ -1230,6 +1283,9 @@ const DAMAGE_DATA = {
 };
 
 // Colour palette for weapons
+
+// Apply hash after all data is loaded
+document.addEventListener('DOMContentLoaded', applyHash);
 </script>
 </body>
 </html>
