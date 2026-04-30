@@ -290,27 +290,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
   .cls-tag{font-size:10px;padding:3px 8px}
 
   /* Stat cards (reroll detail) */
-  .stat-card{border-radius:12px;margin-bottom:14px}
-  .stat-card-header{padding:12px 16px}
-  .stat-name{font-size:14px}
+  .stat-card{border-radius:12px;margin-bottom:12px}
+  .stat-card-header{padding:10px 16px}
+  .stat-name{font-size:13px}
   .stat-count{font-size:11px}
-  .roll-row{grid-template-columns:48px 1fr 80px;gap:12px;padding:9px 16px}
-  .roll-val{font-size:14px}
+  .roll-row{grid-template-columns:44px 1fr 76px;gap:12px;padding:8px 16px}
+  .roll-val{font-size:13px}
   .roll-bar-wrap{height:6px}
-  .roll-rate{font-size:13px}
-  .reroll-item-title{font-size:22px;margin-bottom:6px}
-  .reroll-item-classes{gap:8px;margin-bottom:20px}
+  .roll-bar{border-radius:3px}
+  .roll-rate{font-size:13px;font-weight:500}
+  .roll-rate.high{font-size:13px}
+  .reroll-item-title{font-size:20px;margin-bottom:6px}
+  .reroll-item-classes{gap:8px;margin-bottom:6px}
 
   /* Damage page */
-  .dtype-scroll{padding:16px 20px;gap:10px}
-  .dtype-btn{padding:10px 22px;font-size:13px;border-radius:10px}
-  .dmg-note{font-size:12px;padding:0 20px 12px}
-  .dmg-table-wrap{margin:0 20px 20px;border-radius:12px}
-  .dmg-table{font-size:14px;width:100%}
-  .dmg-table th{padding:12px 20px;font-size:11px;letter-spacing:.14em}
-  .dmg-table th.weapon-col{width:200px;max-width:none;min-width:200px}
-  .dmg-table td{padding:12px 20px}
-  .dmg-table td.weapon-name{font-size:14px;width:200px;max-width:none;overflow:visible;padding:12px 20px}
+  .dtype-scroll{padding:14px 20px;gap:8px}
+  .dtype-btn{padding:9px 20px;font-size:12px;border-radius:9px}
+  .dmg-note{font-size:12px;padding:0 20px 10px}
+  .dmg-table-wrap{margin:0 20px 20px;border-radius:10px}
+  .dmg-table{font-size:13px;width:100%}
+  .dmg-table th{padding:10px 16px;font-size:11px;letter-spacing:.12em}
+  .dmg-table th.weapon-col{width:180px;max-width:none;min-width:180px}
+  .dmg-table td{padding:10px 16px;font-size:13px}
+  .dmg-table td.weapon-name{font-size:13px;font-weight:500;width:180px;max-width:none;overflow:visible;padding:10px 16px}
 }
 
 /* ══ REROLL PAGE ═════════════════════════════════════════════════════════════ */
@@ -399,12 +401,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 /* Reroll title for desktop pane */
 .reroll-item-title{font-family:var(--serif);font-size:18px;color:var(--gold2);font-weight:600;margin-bottom:4px}
 .reroll-item-classes{display:flex;gap:6px;margin-bottom:4px}
-.share-btn{
-  padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
-  background:var(--surface);color:var(--dim);font-family:var(--mono);
-  font-size:11px;cursor:pointer;letter-spacing:.04em;transition:all .15s;white-space:nowrap;
+.share-link{
+  font-family:var(--mono);font-size:11px;color:var(--muted);
+  letter-spacing:.04em;text-decoration:none;
+  border-bottom:1px dashed var(--border2);
+  padding-bottom:1px;
+  user-select:all;cursor:text;
+  transition:color .15s;
 }
-.share-btn:hover{border-color:var(--gold);color:var(--gold2)}
+.share-link:hover{color:var(--gold2)}
 
 /* ══ DAMAGE PAGE ═════════════════════════════════════════════════════════════ */
 .dtype-scroll{display:flex;gap:6px;padding:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -426,9 +431,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
   overflow:hidden;text-overflow:ellipsis;
   font-size:10px;padding:7px 8px;
 }
+@media(min-width:641px){
+  .dmg-table td.weapon-name{font-size:22px!important;font-weight:700;width:240px!important;max-width:none!important;overflow:visible!important;padding:15px 20px!important}
+}
 .dmg-table tr:last-child td{border-bottom:none}
 .dmg-table tr:hover td{background:rgba(255,255,255,.02)}
 .dmg-table tr:hover td.weapon-name{background:rgba(255,255,255,.03)}
+.dmg-table tr.highlighted td{background:rgba(212,153,46,.12)!important}
+.dmg-table tr.highlighted td.weapon-name{background:rgba(212,153,46,.18)!important;color:var(--gold2);font-weight:600}
+.dmg-table tr.highlighted td{color:var(--text)}
 </style>
 </head>
 <body>
@@ -654,6 +665,7 @@ function fmt(v){
 
 // ══ DOM READY ═════════════════════════════════════════════════════════════════
 // applyHash defined globally so data script can call it
+const isMobile=()=>window.innerWidth<=640;
 function applyHash() {
   const hash = location.hash;
   if (!hash || hash === '#') return;
@@ -707,11 +719,21 @@ function applyHash() {
     if (itemName) {
       const item = ALL_DATA[currentCat] && ALL_DATA[currentCat].find(i => i.name === itemName);
       if (item) {
+        // If item isn't visible under current class filter, reset to 'all'
+        if (currentCls !== 'all' && !(item.classes || []).includes(currentCls)) {
+          currentCls = 'all';
+          document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === 'all'));
+          buildItemList();
+        }
+        // Open detail directly
+        openItemDetail(item);
+        // Highlight the matching entry
         setTimeout(() => {
           document.querySelectorAll('.item-entry').forEach(el => {
-            if (el.querySelector('.item-name').textContent === itemName) {
+            const nameEl = el.querySelector('.item-name');
+            if (nameEl && nameEl.textContent === itemName) {
               el.classList.add('selected');
-              openItemDetail(item);
+              el.scrollIntoView({ block: 'nearest' });
             }
           });
         }, 50);
@@ -723,7 +745,6 @@ function applyHash() {
 document.addEventListener('DOMContentLoaded',()=>{
 
 // ── Nav ──
-const isMobile=()=>window.innerWidth<=640;
 // ── Hash helpers ──────────────────────────────────────────────────────────────
 function updateHash() {
   const h = location.hash.slice(1);
@@ -882,18 +903,12 @@ let currentCat='weapons',currentCls='all';
 const CLS_LABEL={warrior:'W',ranger:'R',magician:'M',breaker:'B'};
 const CLS_CSS={warrior:'cls-w',ranger:'cls-r',magician:'cls-m',breaker:'cls-b'};
 
-function setHash(cat, itemName) {
-  const hash = itemName ? `#reroll/${cat}/${encodeURIComponent(itemName)}` : `#reroll/${cat}`;
-  history.replaceState(null, '', hash);
-}
 
 function renderDetail(item){
   const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
-  const shareUrl = location.origin + location.pathname + `#reroll/${currentCat}/${currentCls}/${encodeURIComponent(item.name)}`;
   let html=`<div class="reroll-item-title">${item.name}</div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
     <div class="reroll-item-classes">${clsTags}</div>
-    <button class="share-btn" onclick="copyLink('${shareUrl.replace(/'/g,"\\'")}',this)">🔗 Copy Link</button>
   </div>`;
   item.stats.forEach(s=>{
     const maxRate=Math.max(...s.rolls.map(r=>r.rate));
@@ -1003,16 +1018,19 @@ function renderDamage(dtype){
   document.getElementById('dmg-note').textContent=set.note?'※ '+set.note:'';
   const thead=document.getElementById('dmg-thead');
   let hrow='<tr><th class="weapon-col">Weapon</th>';
-  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">${c}</th>`;});
+  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">+${c}</th>`;});
   thead.innerHTML=hrow+'</tr>';
   const tbody=document.getElementById('dmg-tbody');
-  let html='';
+  tbody.innerHTML='';
   set.items.forEach(item=>{
-    html+=`<tr><td class="weapon-name">${item.name}</td>`;
-    set.cols.forEach(c=>{html+=`<td>${String(item.dmg[c])}</td>`;});
-    html+='</tr>';
+    const tr=document.createElement('tr');
+    let cells=`<td class="weapon-name">${item.name}</td>`;
+    set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
+    tr.innerHTML=cells;
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
+    tbody.appendChild(tr);
   });
-  tbody.innerHTML=html;
 }
 document.querySelectorAll('.dtype-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
