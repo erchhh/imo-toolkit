@@ -11,22 +11,22 @@
 <style>
 /* ── Variables ── */
 :root {
-  --bg:      #07090e;
-  --surface: #0c0f18;
-  --card:    #10131e;
-  --card2:   #13172a;
-  --border:  #1c2035;
-  --border2: #252a40;
-  --text:    #ccc8b8;
-  --dim:     #6a6585;
-  --muted:   #3e4460;
-  --gold:    #c8922a;
-  --gold2:   #e8b84b;
-  --gold3:   #f5d070;
-  --glow:    rgba(200,146,42,0.2);
-  --glow2:   rgba(200,146,42,0.08);
-  --green:   #3a9e6a;
-  --red:     #b84444;
+  --bg:      #0d1117;
+  --surface: #161b27;
+  --card:    #1c2333;
+  --card2:   #202840;
+  --border:  #2d3650;
+  --border2: #3d4a6a;
+  --text:    #e6e2d3;
+  --dim:     #9ba3bc;
+  --muted:   #5a6480;
+  --gold:    #d4992e;
+  --gold2:   #f0c050;
+  --gold3:   #f8d880;
+  --glow:    rgba(212,153,46,0.25);
+  --glow2:   rgba(212,153,46,0.1);
+  --green:   #4cc47a;
+  --red:     #e06060;
   --mono:    'Share Tech Mono','Courier New',monospace;
   --serif:   'Cinzel',Georgia,serif;
   --safe-top: env(safe-area-inset-top,0px);
@@ -190,21 +190,31 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
   #page-enchant{display:none}
   #page-enchant.active{
     display:grid;
-    grid-template-columns:420px 1fr;
-    gap:32px;
-    max-width:1100px;
-    margin:0 auto;
-    width:100%;
-    padding:40px 48px 48px;
-    align-items:start;
-    overflow-y:auto;
+    grid-template-columns:400px 1fr;
+    gap:0;
+    height:100%;
+    overflow:hidden;
+    max-width:none;
+    padding:0;
+    margin:0;
   }
-  .enchant-left{display:flex;flex-direction:column;gap:16px}
-  .enchant-left .card{margin:0}
+  .enchant-left{
+    display:flex;flex-direction:column;gap:0;
+    padding:24px 24px 24px 32px;
+    overflow-y:auto;
+    height:100%;
+    border-right:1px solid var(--border);
+  }
+  .enchant-left .card{margin:0 0 12px}
   .enchant-left .result-card{display:none!important}
-  .enchant-left .calc-btn{margin:0;width:100%}
+  .enchant-left .calc-btn{margin:0 0 12px;width:100%}
   .enchant-left .error-msg{padding:0}
-  .enchant-right{display:flex;flex-direction:column;gap:16px;position:sticky;top:40px}
+  .enchant-right{
+    display:flex;flex-direction:column;gap:16px;
+    padding:24px 32px 24px 28px;
+    overflow-y:auto;
+    height:100%;
+  }
   .enchant-right .rate-table{margin:0}
   .result-panel-desktop{display:flex!important;flex-direction:column;gap:0}
 }
@@ -225,49 +235,48 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
   .tab-btn{padding:16px 32px;font-size:13px;letter-spacing:.12em}
 
   /* Cards & fields */
-  .card{border-radius:14px;margin:0 0 16px}
-  .card-header{font-size:11px;padding:13px 20px 11px;letter-spacing:.2em}
-  .field{padding:16px 20px}
-  .field-label{font-size:15px}
-  .field-sub{font-size:11px;margin-top:3px}
+  .card{border-radius:12px;margin:0 0 12px}
+  .card-header{font-size:10px;padding:10px 18px 9px;letter-spacing:.2em}
+  .field{padding:12px 18px}
+  .field-label{font-size:14px}
+  .field-sub{font-size:10px;margin-top:2px}
 
   /* Toggle */
-  .toggle{width:52px;height:28px}
-  .toggle-track{border-radius:14px}
-  .toggle-thumb{width:22px;height:22px}
-  .toggle input:checked~.toggle-thumb{left:26px}
+  .toggle{width:46px;height:26px}
+  .toggle-track{border-radius:13px}
+  .toggle-thumb{width:20px;height:20px}
+  .toggle input:checked~.toggle-thumb{left:22px}
 
   /* Inputs */
-  .gold-input{font-size:17px;padding:13px 16px;border-radius:10px}
-  .input-wrap{padding:14px 20px}
-  .input-label{font-size:11px;margin-bottom:8px}
+  .gold-input{font-size:15px;padding:10px 14px;border-radius:9px}
+  .input-wrap{padding:11px 18px}
+  .input-label{font-size:10px;margin-bottom:6px}
   .holy-expand.open{padding:0}
 
   /* Seg & level buttons */
-  .seg-group{padding:16px 20px;gap:10px}
-  .seg-btn{padding:12px;font-size:14px;border-radius:10px}
-  .lvl-group{padding:16px 20px;gap:12px}
-  .lvl-btn{padding:18px 4px;font-size:22px;border-radius:10px}
+  .seg-group{padding:12px 18px;gap:8px}
+  .seg-btn{padding:10px;font-size:13px;border-radius:9px}
+  .lvl-group{padding:12px 18px;gap:10px}
+  .lvl-btn{padding:14px 4px;font-size:20px;border-radius:9px}
 
   /* Calc button */
-  .calc-btn{padding:20px;font-size:16px;border-radius:12px;letter-spacing:.15em}
+  .calc-btn{padding:16px;font-size:15px;border-radius:10px;letter-spacing:.12em}
 
-  /* Result */
-  .result-card{padding:24px 20px;border-radius:14px}
-  .result-number{font-size:52px}
-  .result-unit{font-size:18px}
-  .result-meta{font-size:13px;margin-top:14px;line-height:1.8}
-  .result-tags{margin-top:14px;gap:8px}
-  .tag{font-size:11px;padding:5px 12px}
-  .error-msg{font-size:13px}
+  .result-main-desktop{padding:24px 24px 20px}
+  .result-eyebrow{font-size:9px;margin-bottom:8px}
+  .result-number-desktop{font-size:44px}
+  .result-unit-desktop{font-size:16px}
+  .result-tags-desktop{margin-top:12px;gap:5px}
+  .result-tags-desktop .tag{font-size:9px;padding:4px 10px}
+  .result-meta-desktop{font-size:12px;margin-top:12px;line-height:1.7}
 
   /* Rate table — desktop */
-  .rate-table{border-radius:14px;background:var(--card2)}
-  .rate-table-header{grid-template-columns:60px 1fr 1fr 1fr;padding:10px 20px;font-size:10px}
-  .rate-row{grid-template-columns:60px 1fr 1fr 1fr;padding:12px 20px;font-size:14px}
-  .lvl-badge{font-size:16px}
-  .pity-val{color:var(--gold);opacity:.7;font-size:12px}
-  .status{font-size:11px}
+  .rate-table{border-radius:12px;background:var(--card2)}
+  .rate-table-header{grid-template-columns:60px 1fr 1fr 1fr;padding:9px 18px;font-size:9px}
+  .rate-row{grid-template-columns:60px 1fr 1fr 1fr;padding:10px 18px;font-size:13px}
+  .lvl-badge{font-size:15px}
+  .pity-val{color:var(--gold);opacity:.7;font-size:11px}
+  .status{font-size:10px}
 
   /* Reroll page desktop sizing (layout defined in standalone block below) */
   .rr-cats{padding:16px 20px;gap:10px}
@@ -789,6 +798,7 @@ function buildRateTable(){
 document.querySelectorAll('.seg-btn').forEach(b=>{
   b.onclick=()=>{
     S.type=b.dataset.type;
+    S.level = S.type === 'armor' ? 5 : 7;
     document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');buildLevels();buildRateTable();
     if(currentPage==='enchant')history.replaceState(null,'','#enchant');
