@@ -971,7 +971,7 @@ function applyHash() {
   } else if (section === 'reroll') {
     const cat = parts[1];
     const cls = parts[2] || 'all';
-    const itemName = parts[3] ? decodeURIComponent(parts[3]) : null;
+    const itemName = parts[3] ? parts[3].replace(/_/g, ' ') : null;
     if (cat && ALL_DATA[cat]) {
       currentCat = cat;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
@@ -986,14 +986,12 @@ function applyHash() {
     buildItemList();
     if (itemName) {
       const item = ALL_DATA[currentCat] && ALL_DATA[currentCat].find(i => i.name === itemName);
-      console.log('[applyHash] itemName:', itemName, 'cat:', currentCat, 'item found:', !!item);
       if (item) {
         if (currentCls !== 'all' && !(item.classes || []).includes(currentCls)) {
           currentCls = 'all';
           document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === 'all'));
           buildItemList();
         }
-        console.log('[applyHash] calling openItemDetail');
         openItemDetail(item);
         // Highlight the matching entry
         setTimeout(() => {
@@ -1070,7 +1068,7 @@ function setHash(cat, cls, itemName) {
   let hash = `#reroll/${cat}`;
   if (cls && cls !== 'all') hash += `/${cls}`;
   else hash += '/all';
-  if (itemName) hash += `/${encodeURIComponent(itemName)}`;
+  if (itemName) hash += `/${itemName.replace(/ /g, "_")}`;
   history.replaceState(null, '', hash);
 }
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1314,6 +1312,7 @@ renderDamage('swords');
 // Apply hash routing — must run after buildItemList and renderDamage
 applyHash();
 if(!location.hash) history.replaceState(null,'','#enchant');
+window.addEventListener('hashchange', applyHash);
 
 }); // end DOMContentLoaded
 </script>
