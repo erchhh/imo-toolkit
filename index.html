@@ -609,446 +609,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 </div>
 
 <script>
-// ══ MATH ══════════════════════════════════════════════════════════════════════
-const WEAPON_RATES       = {7:.30,8:.10,9:.05};
-const WEAPON_RATES_EVENT = {7:.30,8:.20,9:.10};
-const ARMOR_RATES        = {5:.30,6:.10,7:.05};
-const ARMOR_RATES_EVENT  = {5:.30,6:.20,7:.10};
-const PITY_WEAPON        = {7:.03,8:.02,9:.01};
-const PITY_ARMOR         = {5:.03,6:.02,7:.01};
-
-function getBaseRate(lvl,isArmor,event){
-  const safe=isArmor?4:6;
-  if(lvl<=safe)return 1.0;
-  const r=event?(isArmor?ARMOR_RATES_EVENT:WEAPON_RATES_EVENT):(isArmor?ARMOR_RATES:WEAPON_RATES);
-  return r[lvl]!==undefined?r[lvl]:0.05;
-}
-function getPityInc(lvl,isArmor){
-  return(isArmor?PITY_ARMOR:PITY_WEAPON)[lvl]||0;
-}
-function clearLevel(lvl,isArmor,event,retry,scroll,pity,holy){
-  holy=holy||0;
-  const base=getBaseRate(lvl,isArmor,event);
-  const inc=pity?getPityInc(lvl,isArmor):0;
-  const cost=scroll+holy;
-  if(base>=1.0)return cost;
-  if(inc===0)return(cost+(1-base)*retry)/base;
-  const cap=Math.floor((1.0-base)/inc);
-  let e=cost;
-  for(let i=cap-1;i>=0;i--){const p=Math.min(1.0,base+i*inc);e=cost+(1-p)*(retry+e);}
-  return e;
-}
-function calc(target,itemCost,scrollCost,isArmor,event,pity,holyCost){
-  const safe=isArmor?4:6;
-  if(holyCost!==null){
-    let total=itemCost+scrollCost*Math.min(safe,target);
-    for(let lvl=safe+1;lvl<=target;lvl++)total+=clearLevel(lvl,isArmor,event,total-itemCost,scrollCost,pity,holyCost);
-    return total;
-  }else{
-    let total=itemCost;
-    for(let lvl=1;lvl<=target;lvl++){if(lvl<=safe)total+=scrollCost;else total+=clearLevel(lvl,isArmor,event,total,scrollCost,pity,0);}
-    return total;
-  }
-}
-function parseGold(s){
-  s=s.trim().toLowerCase().replace(/,/g,'');
-  if(!s)throw 0;
-  if(s.endsWith('m'))return parseFloat(s)*1e6;
-  if(s.endsWith('k'))return parseFloat(s)*1e3;
-  const v=parseFloat(s);if(isNaN(v))throw 0;return v;
-}
-function fmt(v){
-  if(v>=1e6)return(v/1e6).toFixed(2)+'m';
-  if(v>=1e3)return(v/1e3).toFixed(2)+'k';
-  return v.toFixed(2);
-}
-
-// ══ DOM READY ═════════════════════════════════════════════════════════════════
-// applyHash defined globally so data script can call it
-const isMobile=()=>window.innerWidth<=640;
-function applyHash() {
-  const hash = location.hash;
-  if (!hash || hash === '#') return;
-  const parts = hash.slice(1).split('/');
-  const section = parts[0];
-
-  if (section === 'enchant') {
-    const type = parts[1];
-    const level = parseInt(parts[2]);
-    if (type === 'weapon' || type === 'armor') {
-      S.type = type;
-      document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
-    }
-    if (!isNaN(level)) S.level = level;
-    buildLevels(); buildRateTable();
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('page-enchant').classList.add('active');
-    document.querySelectorAll('[data-page="enchant"]').forEach(b=>b.classList.add('active'));
-    currentPage = 'enchant';
-
-  } else if (section === 'damage') {
-    const dtype = parts[1];
-    if (dtype && DAMAGE_DATA[dtype]) {
-      currentDtype = dtype;
-      document.querySelectorAll('.dtype-btn').forEach(b => b.classList.toggle('active', b.dataset.dtype === dtype));
-      renderDamage(dtype);
-    }
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('page-damage').classList.add('active');
-    document.querySelectorAll('[data-page="damage"]').forEach(b=>b.classList.add('active'));
-    currentPage = 'damage';
-
-  } else if (section === 'reroll') {
-    const cat = parts[1];
-    const cls = parts[2] || 'all';
-    const itemName = parts[3] ? decodeURIComponent(parts[3]) : null;
-    if (cat && ALL_DATA[cat]) {
-      currentCat = cat;
-      document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-    }
-    currentCls = cls;
-    document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === cls));
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('page-reroll').classList.add('active');
-    document.querySelectorAll('[data-page="reroll"]').forEach(b=>b.classList.add('active'));
-    currentPage = 'reroll';
-    buildItemList();
-    if (itemName) {
-      const item = ALL_DATA[currentCat] && ALL_DATA[currentCat].find(i => i.name === itemName);
-      if (item) {
-        // If item isn't visible under current class filter, reset to 'all'
-        if (currentCls !== 'all' && !(item.classes || []).includes(currentCls)) {
-          currentCls = 'all';
-          document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === 'all'));
-          buildItemList();
-        }
-        // Open detail directly
-        openItemDetail(item);
-        // Highlight the matching entry
-        setTimeout(() => {
-          document.querySelectorAll('.item-entry').forEach(el => {
-            const nameEl = el.querySelector('.item-name');
-            if (nameEl && nameEl.textContent === itemName) {
-              el.classList.add('selected');
-              el.scrollIntoView({ block: 'nearest' });
-            }
-          });
-        }, 50);
-      }
-    }
-  }
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
-
-// ── Nav ──
-// ── Hash helpers ──────────────────────────────────────────────────────────────
-function updateHash() {
-  const h = location.hash.slice(1);
-  const page = h.split('/')[0];
-  // Build new hash based on current state
-  if (currentPage === 'enchant') {
-    history.replaceState(null, '', '#enchant');
-  } else if (currentPage === 'damage') {
-    history.replaceState(null, '', `#damage/${currentDtype}`);
-  } else if (currentPage === 'reroll') {
-    // reroll hash set separately via setHash()
-  }
-}
-
-function setHash(cat, cls, itemName) {
-  let hash = `#reroll/${cat}`;
-  if (cls && cls !== 'all') hash += `/${cls}`;
-  else hash += '/all';
-  if (itemName) hash += `/${encodeURIComponent(itemName)}`;
-  history.replaceState(null, '', hash);
-}
-
-let currentPage = 'enchant';
-
-function switchPage(page){
-  currentPage = page;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  document.querySelectorAll('[data-page="'+page+'"]').forEach(b=>b.classList.add('active'));
-  if (page === 'damage') { renderDamage(currentDtype); history.replaceState(null, '', `#damage/${currentDtype}`); }
-  else if (page === 'reroll') { buildItemList(); setHash(currentCat, currentCls, null); }
-  else if (page === 'enchant') { history.replaceState(null, '', '#enchant'); }
-}
-document.querySelectorAll('.tab-btn,.nav-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>switchPage(btn.dataset.page));
-});
-
-// ── Enchant state ──
-let S={type:'weapon',level:7};
-
-function buildLevels(){
-  const g=document.getElementById('level-group');
-  const isArmor=S.type==='armor';
-  const min=isArmor?5:7,max=isArmor?7:9;
-  if(S.level<min||S.level>max)S.level=min;
-  g.innerHTML='';
-  for(let l=min;l<=max;l++){
-    const b=document.createElement('button');
-    b.className='lvl-btn'+(l===S.level?' active':'');
-    b.textContent='+'+l;
-    b.onclick=()=>{S.level=l;buildLevels();buildRateTable();if(currentPage==='enchant')history.replaceState(null,'','#enchant');};
-    g.appendChild(b);
-  }
-}
-function buildRateTable(){
-  const isArmor=S.type==='armor';
-  const event=document.getElementById('tog-event').checked;
-  const pity=document.getElementById('tog-pity').checked;
-  const rows=document.getElementById('rate-rows');
-  rows.innerHTML='';
-  const min=isArmor?5:7,max=isArmor?7:9;
-  for(let lvl=min;lvl<=max;lvl++){
-    const base=getBaseRate(lvl,isArmor,event);
-    const inc=getPityInc(lvl,isArmor);
-    const row=document.createElement('div');
-    row.className='rate-row'+(lvl===S.level?' active-level':'');
-    row.innerHTML=`<div class="lvl-badge">+${lvl}</div><div class="rate-val">${(base*100).toFixed(0)}%</div><div class="pity-val">${pity&&inc>0?'+'+(inc*100).toFixed(0)+'%':'—'}</div><div class="status risky">RISKY</div>`;
-    rows.appendChild(row);
-  }
-}
-document.querySelectorAll('.seg-btn').forEach(b=>{
-  b.onclick=()=>{
-    S.type=b.dataset.type;
-    S.level = S.type === 'armor' ? 5 : 7;
-    document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');buildLevels();buildRateTable();
-    if(currentPage==='enchant')history.replaceState(null,'','#enchant');
-  };
-});
-document.getElementById('tog-holy').addEventListener('change',e=>{
-  document.getElementById('holy-expand').classList.toggle('open',e.target.checked);
-});
-['tog-event','tog-pity'].forEach(id=>document.getElementById(id).addEventListener('change',buildRateTable));
-
-function run(){
-  const err=document.getElementById('error-msg');
-  err.textContent='';
-  document.querySelectorAll('.gold-input').forEach(el=>el.classList.remove('error'));
-  let itemCost,scrollCost,holyCost=null;
-  try{itemCost=parseGold(document.getElementById('in-item').value);}
-  catch{err.textContent='Invalid item cost.';document.getElementById('in-item').classList.add('error');return;}
-  try{scrollCost=parseGold(document.getElementById('in-scroll').value);}
-  catch{err.textContent='Invalid scroll cost.';document.getElementById('in-scroll').classList.add('error');return;}
-  if(document.getElementById('tog-holy').checked){
-    try{holyCost=parseGold(document.getElementById('in-holy').value);}
-    catch{err.textContent='Invalid holy water cost.';document.getElementById('in-holy').classList.add('error');return;}
-  }
-  const isArmor=S.type==='armor';
-  const event=document.getElementById('tog-event').checked;
-  const pity=document.getElementById('tog-pity').checked;
-  const safe=isArmor?4:6;
-  const numEl=document.getElementById('result-number');
-  const metaEl=document.getElementById('result-meta');
-  const tagsEl=document.getElementById('result-tags');
-  const mainEl=document.getElementById('result-main');
-  const numElD=document.getElementById('result-number-desktop');
-  const metaElD=document.getElementById('result-meta-desktop');
-  const tagsElD=document.getElementById('result-tags-desktop');
-  const mainElD=document.getElementById('result-main-desktop');
-  if(S.level<=safe){
-    const total=itemCost+S.level*scrollCost;
-    const numHtml=fmt(total)+'<span class="result-unit">gold</span>';
-    numEl.innerHTML=numHtml; numEl.className='result-number green';
-    numElD.innerHTML=fmt(total)+'<span class="result-unit-desktop">gold</span>';
-    numElD.className='result-number-desktop green';
-    const meta=`All enchants to +${S.level} are 100% guaranteed.<br>Item: ${fmt(itemCost)} · ${S.level}× scroll: ${fmt(S.level*scrollCost)}`;
-    metaEl.innerHTML=meta; metaElD.innerHTML=meta;
-    tagsEl.innerHTML='<span class="tag">GUARANTEED</span>';
-    tagsElD.innerHTML='<span class="tag">GUARANTEED</span>';
-  }else{
-    const avg=calc(S.level,itemCost,scrollCost,isArmor,event,pity,holyCost);
-    numEl.innerHTML=fmt(avg)+'<span class="result-unit">gold</span>';
-    numEl.className='result-number';
-    numElD.innerHTML=fmt(avg)+'<span class="result-unit-desktop">gold</span>';
-    numElD.className='result-number-desktop';
-    let meta=`Item: ${fmt(itemCost)} · Scroll: ${fmt(scrollCost)}`;
-    if(holyCost!==null)meta+=` · Holy: ${fmt(holyCost)}`;
-    meta+='<br>';
-    for(let lvl=safe+1;lvl<=S.level;lvl++){
-      const r=getBaseRate(lvl,isArmor,event);
-      const inc=getPityInc(lvl,isArmor);
-      meta+=`+${lvl}: ${(r*100).toFixed(0)}%`;
-      if(pity&&inc>0)meta+=` <span class="hi">+${(inc*100).toFixed(0)}%/fail</span>`;
-      if(lvl<S.level)meta+=' · ';
-    }
-    metaEl.innerHTML=meta; metaElD.innerHTML=meta;
-    const tags=[];
-    if(event)tags.push('EVENT');if(pity)tags.push('PITY');if(holyCost!==null)tags.push('HOLY WATER');
-    if(!tags.length)tags.push('BASE RATES');
-    const tagsHtml=tags.map(t=>`<span class="tag">${t}</span>`).join('');
-    tagsEl.innerHTML=tagsHtml; tagsElD.innerHTML=tagsHtml;
-  }
-  mainEl.classList.add('show');
-  mainElD.classList.add('has-value');
-  buildRateTable();
-}
-document.getElementById('calc-btn').addEventListener('click',run);
-document.querySelectorAll('.gold-input').forEach(el=>{
-  el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.target.blur();run();}});
-});
-buildLevels();buildRateTable();
-
-// ── Reroll ──
-let currentCat='weapons',currentCls='all';
-const CLS_LABEL={warrior:'W',ranger:'R',magician:'M',breaker:'B'};
-const CLS_CSS={warrior:'cls-w',ranger:'cls-r',magician:'cls-m',breaker:'cls-b'};
-
-
-function renderDetail(item){
-  const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
-  let html=`<div class="reroll-item-title">${item.name}</div>
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-    <div class="reroll-item-classes">${clsTags}</div>
-  </div>`;
-  item.stats.forEach(s=>{
-    const maxRate=Math.max(...s.rolls.map(r=>r.rate));
-    html+=`<div class="stat-card"><div class="stat-card-header"><div class="stat-name">${s.stat}</div><div class="stat-count">${s.rolls.length} values</div></div>`;
-    s.rolls.forEach(r=>{
-      const pct=(r.rate/maxRate*100).toFixed(1);
-      const hi=r.rate>=maxRate*0.5?' high':'';;
-      html+=`<div class="roll-row"><div class="roll-val">${r.val}</div><div class="roll-bar-wrap"><div class="roll-bar${hi}" style="width:${pct}%"></div></div><div class="roll-rate${hi}">${r.rate.toFixed(4)}%</div></div>`;
-    });
-    html+='</div>';
-  });
-  return html;
-}
-
-function openItemDetail(item) {
-  const html = renderDetail(item);
-  if(isMobile()){
-    document.getElementById('detail-title').textContent=item.name;
-    document.getElementById('detail-body').innerHTML=html;
-    document.getElementById('detail-sheet').classList.add('open');
-  } else {
-    document.getElementById('reroll-detail').innerHTML=html;
-  }
-}
-
-function buildItemList(){
-  const list=document.getElementById('item-list');
-  list.innerHTML='';
-  const data=ALL_DATA[currentCat];
-  const q=document.getElementById('rr-search').value.toLowerCase();
-  let shown=0;
-  data.forEach((item)=>{
-    if(q&&!item.name.toLowerCase().includes(q))return;
-    if(currentCls!=='all'&&!(item.classes||[]).includes(currentCls))return;
-    shown++;
-    const el=document.createElement('div');
-    el.className='item-entry';
-    const tags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${CLS_LABEL[c]}</span>`).join('');
-    el.innerHTML=`<div class="item-name">${item.name}</div><div class="item-cls-tags">${tags}</div>`;
-    el.addEventListener('click',()=>{
-      document.querySelectorAll('.item-entry').forEach(e=>e.classList.remove('selected'));
-      el.classList.add('selected');
-      setHash(currentCat, currentCls, item.name);
-      openItemDetail(item);
-    });
-    list.appendChild(el);
-  });
-  if(!shown)list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">No items found</div>';
-}
-
-
-document.querySelectorAll('.cat-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    currentCat=btn.dataset.cat;
-    document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('rr-search').value='';
-    document.getElementById('reroll-detail').innerHTML='<div class="rr-placeholder">← Select an item to view reroll rates</div>';
-    setHash(currentCat, currentCls, null);
-    buildItemList();
-  });
-});
-document.querySelectorAll('.cls-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    currentCls=btn.dataset.cls;
-    document.querySelectorAll('.cls-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    setHash(currentCat, currentCls, null);
-    buildItemList();
-  });
-});
-document.getElementById('rr-search').addEventListener('input',buildItemList);
-document.getElementById('detail-back').addEventListener('click',()=>{
-  document.getElementById('detail-sheet').classList.remove('open');
-});
-
-window.copyLink = function(url, btn) {
-  const orig = btn.textContent;
-  const finish = (ok) => {
-    btn.textContent = ok ? '✓ Copied!' : url;
-    btn.style.color = 'var(--green)';
-    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2500);
-  };
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(url).then(() => finish(true)).catch(() => fallback());
-  } else { fallback(); }
-  function fallback() {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta); finish(true);
-    } catch { finish(false); }
-  }
-};
-
-// ── Damage ──
-let currentDtype='swords';
-function dmgMax(v){
-  if(typeof v==='number')return v;
-  const s=String(v);if(!s||s==='0')return 0;
-  return parseFloat(s.split('-').pop())||0;
-}
-function renderDamage(dtype){
-  currentDtype=dtype;
-  const set=DAMAGE_DATA[dtype];
-  document.getElementById('dmg-note').textContent=set.note?'※ '+set.note:'';
-  const thead=document.getElementById('dmg-thead');
-  let hrow='<tr><th class="weapon-col">Weapon</th>';
-  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">+${c}</th>`;});
-  thead.innerHTML=hrow+'</tr>';
-  const tbody=document.getElementById('dmg-tbody');
-  tbody.innerHTML='';
-  set.items.forEach(item=>{
-    const tr=document.createElement('tr');
-    let cells=`<td class="weapon-name">${item.name}</td>`;
-    set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
-    tr.innerHTML=cells;
-    tr.style.cursor='pointer';
-    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
-    tbody.appendChild(tr);
-  });
-}
-document.querySelectorAll('.dtype-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    currentDtype=btn.dataset.dtype;
-    document.querySelectorAll('.dtype-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    renderDamage(currentDtype);
-    history.replaceState(null,'',`#damage/${currentDtype}`);
-  });
-});
-
-buildItemList();
-renderDamage('swords');
-if(!location.hash) history.replaceState(null,'','#enchant');
-
-}); // end DOMContentLoaded
-</script>
-<script>
 // ══ DATA (injected separately to keep script blocks manageable) ══════════════
 const BOOTS_DATA = [
   { name: "Snake Leather Boots", classes:["warrior","ranger"], stats: [{ stat: "Dexterity", rolls: [{val:1,rate:50.0},{val:2,rate:50.0}] }]},
@@ -1311,9 +871,451 @@ const DAMAGE_DATA = {
 };
 
 // Colour palette for weapons
+</script>
+<script>
+// ══ MATH ══════════════════════════════════════════════════════════════════════
+const WEAPON_RATES       = {7:.30,8:.10,9:.05};
+const WEAPON_RATES_EVENT = {7:.30,8:.20,9:.10};
+const ARMOR_RATES        = {5:.30,6:.10,7:.05};
+const ARMOR_RATES_EVENT  = {5:.30,6:.20,7:.10};
+const PITY_WEAPON        = {7:.03,8:.02,9:.01};
+const PITY_ARMOR         = {5:.03,6:.02,7:.01};
 
-// Apply hash after all data is loaded
-document.addEventListener('DOMContentLoaded', applyHash);
+function getBaseRate(lvl,isArmor,event){
+  const safe=isArmor?4:6;
+  if(lvl<=safe)return 1.0;
+  const r=event?(isArmor?ARMOR_RATES_EVENT:WEAPON_RATES_EVENT):(isArmor?ARMOR_RATES:WEAPON_RATES);
+  return r[lvl]!==undefined?r[lvl]:0.05;
+}
+function getPityInc(lvl,isArmor){
+  return(isArmor?PITY_ARMOR:PITY_WEAPON)[lvl]||0;
+}
+function clearLevel(lvl,isArmor,event,retry,scroll,pity,holy){
+  holy=holy||0;
+  const base=getBaseRate(lvl,isArmor,event);
+  const inc=pity?getPityInc(lvl,isArmor):0;
+  const cost=scroll+holy;
+  if(base>=1.0)return cost;
+  if(inc===0)return(cost+(1-base)*retry)/base;
+  const cap=Math.floor((1.0-base)/inc);
+  let e=cost;
+  for(let i=cap-1;i>=0;i--){const p=Math.min(1.0,base+i*inc);e=cost+(1-p)*(retry+e);}
+  return e;
+}
+function calc(target,itemCost,scrollCost,isArmor,event,pity,holyCost){
+  const safe=isArmor?4:6;
+  if(holyCost!==null){
+    let total=itemCost+scrollCost*Math.min(safe,target);
+    for(let lvl=safe+1;lvl<=target;lvl++)total+=clearLevel(lvl,isArmor,event,total-itemCost,scrollCost,pity,holyCost);
+    return total;
+  }else{
+    let total=itemCost;
+    for(let lvl=1;lvl<=target;lvl++){if(lvl<=safe)total+=scrollCost;else total+=clearLevel(lvl,isArmor,event,total,scrollCost,pity,0);}
+    return total;
+  }
+}
+function parseGold(s){
+  s=s.trim().toLowerCase().replace(/,/g,'');
+  if(!s)throw 0;
+  if(s.endsWith('m'))return parseFloat(s)*1e6;
+  if(s.endsWith('k'))return parseFloat(s)*1e3;
+  const v=parseFloat(s);if(isNaN(v))throw 0;return v;
+}
+function fmt(v){
+  if(v>=1e6)return(v/1e6).toFixed(2)+'m';
+  if(v>=1e3)return(v/1e3).toFixed(2)+'k';
+  return v.toFixed(2);
+}
+
+// ══ DOM READY ═════════════════════════════════════════════════════════════════
+// applyHash defined globally so data script can call it
+const isMobile=()=>window.innerWidth<=640;
+let currentCat='weapons',currentCls='all';
+const CLS_LABEL={warrior:'W',ranger:'R',magician:'M',breaker:'B'};
+const CLS_CSS={warrior:'cls-w',ranger:'cls-r',magician:'cls-m',breaker:'cls-b'};
+let currentPage='enchant';
+function applyHash() {
+  const hash = location.hash;
+  if (!hash || hash === '#') return;
+  const parts = hash.slice(1).split('/');
+  const section = parts[0];
+
+  if (section === 'enchant') {
+    const type = parts[1];
+    const level = parseInt(parts[2]);
+    if (type === 'weapon' || type === 'armor') {
+      S.type = type;
+      document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    }
+    if (!isNaN(level)) S.level = level;
+    buildLevels(); buildRateTable();
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-enchant').classList.add('active');
+    document.querySelectorAll('[data-page="enchant"]').forEach(b=>b.classList.add('active'));
+    currentPage = 'enchant';
+
+  } else if (section === 'damage') {
+    const dtype = parts[1];
+    if (dtype && DAMAGE_DATA[dtype]) {
+      currentDtype = dtype;
+      document.querySelectorAll('.dtype-btn').forEach(b => b.classList.toggle('active', b.dataset.dtype === dtype));
+      renderDamage(dtype);
+    }
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-damage').classList.add('active');
+    document.querySelectorAll('[data-page="damage"]').forEach(b=>b.classList.add('active'));
+    currentPage = 'damage';
+
+  } else if (section === 'reroll') {
+    const cat = parts[1];
+    const cls = parts[2] || 'all';
+    const itemName = parts[3] ? decodeURIComponent(parts[3]) : null;
+    if (cat && ALL_DATA[cat]) {
+      currentCat = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    }
+    currentCls = cls;
+    document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === cls));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-reroll').classList.add('active');
+    document.querySelectorAll('[data-page="reroll"]').forEach(b=>b.classList.add('active'));
+    currentPage = 'reroll';
+    buildItemList();
+    if (itemName) {
+      const item = ALL_DATA[currentCat] && ALL_DATA[currentCat].find(i => i.name === itemName);
+      console.log('[applyHash] itemName:', itemName, 'cat:', currentCat, 'item found:', !!item);
+      if (item) {
+        if (currentCls !== 'all' && !(item.classes || []).includes(currentCls)) {
+          currentCls = 'all';
+          document.querySelectorAll('.cls-btn').forEach(b => b.classList.toggle('active', b.dataset.cls === 'all'));
+          buildItemList();
+        }
+        console.log('[applyHash] calling openItemDetail');
+        openItemDetail(item);
+        // Highlight the matching entry
+        setTimeout(() => {
+          document.querySelectorAll('.item-entry').forEach(el => {
+            const nameEl = el.querySelector('.item-name');
+            if (nameEl && nameEl.textContent === itemName) {
+              el.classList.add('selected');
+              el.scrollIntoView({ block: 'nearest' });
+            }
+          });
+        }, 50);
+      }
+    }
+  }
+}
+
+
+function renderDetail(item){
+  const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
+  let html=`<div class="reroll-item-title">${item.name}</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="reroll-item-classes">${clsTags}</div>
+  </div>`;
+  item.stats.forEach(s=>{
+    const maxRate=Math.max(...s.rolls.map(r=>r.rate));
+    html+=`<div class="stat-card"><div class="stat-card-header"><div class="stat-name">${s.stat}</div><div class="stat-count">${s.rolls.length} values</div></div>`;
+    s.rolls.forEach(r=>{
+      const pct=(r.rate/maxRate*100).toFixed(1);
+      const hi=r.rate>=maxRate*0.5?' high':'';
+      html+=`<div class="roll-row"><div class="roll-val">${r.val}</div><div class="roll-bar-wrap"><div class="roll-bar${hi}" style="width:${pct}%"></div></div><div class="roll-rate${hi}">${r.rate.toFixed(4)}%</div></div>`;
+    });
+    html+='</div>';
+  });
+  return html;
+}
+
+function openItemDetail(item) {
+  const html = renderDetail(item);
+  if(isMobile()){
+    document.getElementById('detail-title').textContent=item.name;
+    document.getElementById('detail-body').innerHTML=html;
+    document.getElementById('detail-sheet').classList.add('open');
+  } else {
+    document.getElementById('reroll-detail').innerHTML=html;
+  }
+}
+
+function buildItemList(){
+  const list=document.getElementById('item-list');
+  list.innerHTML='';
+  const data=ALL_DATA[currentCat];
+  const q=document.getElementById('rr-search').value.toLowerCase();
+  let shown=0;
+  data.forEach((item)=>{
+    if(q&&!item.name.toLowerCase().includes(q))return;
+    if(currentCls!=='all'&&!(item.classes||[]).includes(currentCls))return;
+    shown++;
+    const el=document.createElement('div');
+    el.className='item-entry';
+    const tags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${CLS_LABEL[c]}</span>`).join('');
+    el.innerHTML=`<div class="item-name">${item.name}</div><div class="item-cls-tags">${tags}</div>`;
+    el.addEventListener('click',()=>{
+      document.querySelectorAll('.item-entry').forEach(e=>e.classList.remove('selected'));
+      el.classList.add('selected');
+      setHash(currentCat, currentCls, item.name);
+      openItemDetail(item);
+    });
+    list.appendChild(el);
+  });
+  if(!shown)list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">No items found</div>';
+}
+
+function setHash(cat, cls, itemName) {
+  let hash = `#reroll/${cat}`;
+  if (cls && cls !== 'all') hash += `/${cls}`;
+  else hash += '/all';
+  if (itemName) hash += `/${encodeURIComponent(itemName)}`;
+  history.replaceState(null, '', hash);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+
+// ── Nav ──
+// ── Hash helpers ──────────────────────────────────────────────────────────────
+function updateHash() {
+  const h = location.hash.slice(1);
+  const page = h.split('/')[0];
+  // Build new hash based on current state
+  if (currentPage === 'enchant') {
+    history.replaceState(null, '', '#enchant');
+  } else if (currentPage === 'damage') {
+    history.replaceState(null, '', `#damage/${currentDtype}`);
+  } else if (currentPage === 'reroll') {
+    // reroll hash set separately via setHash()
+  }
+}
+
+
+
+
+function switchPage(page){
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn,.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('[data-page="'+page+'"]').forEach(b=>b.classList.add('active'));
+  if (page === 'damage') { renderDamage(currentDtype); history.replaceState(null, '', `#damage/${currentDtype}`); }
+  else if (page === 'reroll') { buildItemList(); setHash(currentCat, currentCls, null); }
+  else if (page === 'enchant') { history.replaceState(null, '', '#enchant'); }
+}
+document.querySelectorAll('.tab-btn,.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>switchPage(btn.dataset.page));
+});
+
+// ── Enchant state ──
+let S={type:'weapon',level:7};
+
+function buildLevels(){
+  const g=document.getElementById('level-group');
+  const isArmor=S.type==='armor';
+  const min=isArmor?5:7,max=isArmor?7:9;
+  if(S.level<min||S.level>max)S.level=min;
+  g.innerHTML='';
+  for(let l=min;l<=max;l++){
+    const b=document.createElement('button');
+    b.className='lvl-btn'+(l===S.level?' active':'');
+    b.textContent='+'+l;
+    b.onclick=()=>{S.level=l;buildLevels();buildRateTable();if(currentPage==='enchant')history.replaceState(null,'','#enchant');};
+    g.appendChild(b);
+  }
+}
+function buildRateTable(){
+  const isArmor=S.type==='armor';
+  const event=document.getElementById('tog-event').checked;
+  const pity=document.getElementById('tog-pity').checked;
+  const rows=document.getElementById('rate-rows');
+  rows.innerHTML='';
+  const min=isArmor?5:7,max=isArmor?7:9;
+  for(let lvl=min;lvl<=max;lvl++){
+    const base=getBaseRate(lvl,isArmor,event);
+    const inc=getPityInc(lvl,isArmor);
+    const row=document.createElement('div');
+    row.className='rate-row'+(lvl===S.level?' active-level':'');
+    row.innerHTML=`<div class="lvl-badge">+${lvl}</div><div class="rate-val">${(base*100).toFixed(0)}%</div><div class="pity-val">${pity&&inc>0?'+'+(inc*100).toFixed(0)+'%':'—'}</div><div class="status risky">RISKY</div>`;
+    rows.appendChild(row);
+  }
+}
+document.querySelectorAll('.seg-btn').forEach(b=>{
+  b.onclick=()=>{
+    S.type=b.dataset.type;
+    S.level = S.type === 'armor' ? 5 : 7;
+    document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');buildLevels();buildRateTable();
+    if(currentPage==='enchant')history.replaceState(null,'','#enchant');
+  };
+});
+document.getElementById('tog-holy').addEventListener('change',e=>{
+  document.getElementById('holy-expand').classList.toggle('open',e.target.checked);
+});
+['tog-event','tog-pity'].forEach(id=>document.getElementById(id).addEventListener('change',buildRateTable));
+
+function run(){
+  const err=document.getElementById('error-msg');
+  err.textContent='';
+  document.querySelectorAll('.gold-input').forEach(el=>el.classList.remove('error'));
+  let itemCost,scrollCost,holyCost=null;
+  try{itemCost=parseGold(document.getElementById('in-item').value);}
+  catch{err.textContent='Invalid item cost.';document.getElementById('in-item').classList.add('error');return;}
+  try{scrollCost=parseGold(document.getElementById('in-scroll').value);}
+  catch{err.textContent='Invalid scroll cost.';document.getElementById('in-scroll').classList.add('error');return;}
+  if(document.getElementById('tog-holy').checked){
+    try{holyCost=parseGold(document.getElementById('in-holy').value);}
+    catch{err.textContent='Invalid holy water cost.';document.getElementById('in-holy').classList.add('error');return;}
+  }
+  const isArmor=S.type==='armor';
+  const event=document.getElementById('tog-event').checked;
+  const pity=document.getElementById('tog-pity').checked;
+  const safe=isArmor?4:6;
+  const numEl=document.getElementById('result-number');
+  const metaEl=document.getElementById('result-meta');
+  const tagsEl=document.getElementById('result-tags');
+  const mainEl=document.getElementById('result-main');
+  const numElD=document.getElementById('result-number-desktop');
+  const metaElD=document.getElementById('result-meta-desktop');
+  const tagsElD=document.getElementById('result-tags-desktop');
+  const mainElD=document.getElementById('result-main-desktop');
+  if(S.level<=safe){
+    const total=itemCost+S.level*scrollCost;
+    const numHtml=fmt(total)+'<span class="result-unit">gold</span>';
+    numEl.innerHTML=numHtml; numEl.className='result-number green';
+    numElD.innerHTML=fmt(total)+'<span class="result-unit-desktop">gold</span>';
+    numElD.className='result-number-desktop green';
+    const meta=`All enchants to +${S.level} are 100% guaranteed.<br>Item: ${fmt(itemCost)} · ${S.level}× scroll: ${fmt(S.level*scrollCost)}`;
+    metaEl.innerHTML=meta; metaElD.innerHTML=meta;
+    tagsEl.innerHTML='<span class="tag">GUARANTEED</span>';
+    tagsElD.innerHTML='<span class="tag">GUARANTEED</span>';
+  }else{
+    const avg=calc(S.level,itemCost,scrollCost,isArmor,event,pity,holyCost);
+    numEl.innerHTML=fmt(avg)+'<span class="result-unit">gold</span>';
+    numEl.className='result-number';
+    numElD.innerHTML=fmt(avg)+'<span class="result-unit-desktop">gold</span>';
+    numElD.className='result-number-desktop';
+    let meta=`Item: ${fmt(itemCost)} · Scroll: ${fmt(scrollCost)}`;
+    if(holyCost!==null)meta+=` · Holy: ${fmt(holyCost)}`;
+    meta+='<br>';
+    for(let lvl=safe+1;lvl<=S.level;lvl++){
+      const r=getBaseRate(lvl,isArmor,event);
+      const inc=getPityInc(lvl,isArmor);
+      meta+=`+${lvl}: ${(r*100).toFixed(0)}%`;
+      if(pity&&inc>0)meta+=` <span class="hi">+${(inc*100).toFixed(0)}%/fail</span>`;
+      if(lvl<S.level)meta+=' · ';
+    }
+    metaEl.innerHTML=meta; metaElD.innerHTML=meta;
+    const tags=[];
+    if(event)tags.push('EVENT');if(pity)tags.push('PITY');if(holyCost!==null)tags.push('HOLY WATER');
+    if(!tags.length)tags.push('BASE RATES');
+    const tagsHtml=tags.map(t=>`<span class="tag">${t}</span>`).join('');
+    tagsEl.innerHTML=tagsHtml; tagsElD.innerHTML=tagsHtml;
+  }
+  mainEl.classList.add('show');
+  mainElD.classList.add('has-value');
+  buildRateTable();
+}
+document.getElementById('calc-btn').addEventListener('click',run);
+document.querySelectorAll('.gold-input').forEach(el=>{
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.target.blur();run();}});
+});
+buildLevels();buildRateTable();
+
+// ── Reroll ──
+
+
+
+
+document.querySelectorAll('.cat-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    currentCat=btn.dataset.cat;
+    document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('rr-search').value='';
+    document.getElementById('reroll-detail').innerHTML='<div class="rr-placeholder">← Select an item to view reroll rates</div>';
+    setHash(currentCat, currentCls, null);
+    buildItemList();
+  });
+});
+document.querySelectorAll('.cls-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    currentCls=btn.dataset.cls;
+    document.querySelectorAll('.cls-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    setHash(currentCat, currentCls, null);
+    buildItemList();
+  });
+});
+document.getElementById('rr-search').addEventListener('input',buildItemList);
+document.getElementById('detail-back').addEventListener('click',()=>{
+  document.getElementById('detail-sheet').classList.remove('open');
+});
+
+window.copyLink = function(url, btn) {
+  const orig = btn.textContent;
+  const finish = (ok) => {
+    btn.textContent = ok ? '✓ Copied!' : url;
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2500);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(() => finish(true)).catch(() => fallback());
+  } else { fallback(); }
+  function fallback() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); finish(true);
+    } catch { finish(false); }
+  }
+};
+
+// ── Damage ──
+let currentDtype='swords';
+function dmgMax(v){
+  if(typeof v==='number')return v;
+  const s=String(v);if(!s||s==='0')return 0;
+  return parseFloat(s.split('-').pop())||0;
+}
+function renderDamage(dtype){
+  currentDtype=dtype;
+  const set=DAMAGE_DATA[dtype];
+  document.getElementById('dmg-note').textContent=set.note?'※ '+set.note:'';
+  const thead=document.getElementById('dmg-thead');
+  let hrow='<tr><th class="weapon-col">Weapon</th>';
+  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">+${c}</th>`;});
+  thead.innerHTML=hrow+'</tr>';
+  const tbody=document.getElementById('dmg-tbody');
+  tbody.innerHTML='';
+  set.items.forEach(item=>{
+    const tr=document.createElement('tr');
+    let cells=`<td class="weapon-name">${item.name}</td>`;
+    set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
+    tr.innerHTML=cells;
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
+    tbody.appendChild(tr);
+  });
+}
+document.querySelectorAll('.dtype-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    currentDtype=btn.dataset.dtype;
+    document.querySelectorAll('.dtype-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderDamage(currentDtype);
+    history.replaceState(null,'',`#damage/${currentDtype}`);
+  });
+});
+
+buildItemList();
+renderDamage('swords');
+// Apply hash routing — must run after buildItemList and renderDamage
+applyHash();
+if(!location.hash) history.replaceState(null,'','#enchant');
+
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
