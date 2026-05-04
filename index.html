@@ -189,31 +189,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 @media(min-width:641px){
   #page-enchant{display:none}
   #page-enchant.active{
-    display:grid;
-    grid-template-columns:400px 1fr;
-    gap:0;
-    height:100%;
-    overflow:hidden;
-    max-width:none;
-    padding:0;
-    margin:0;
-  }
-  .enchant-left{
-    display:flex;flex-direction:column;gap:0;
-    padding:24px 24px 24px 32px;
+    display:flex;
+    justify-content:center;
     overflow-y:auto;
     height:100%;
-    border-right:1px solid var(--border);
+    padding:40px 48px;
+    gap:48px;
+    align-items:start;
   }
-  .enchant-left .card{margin:0 0 12px}
+  .enchant-left{
+    display:flex;flex-direction:column;
+    width:480px;flex-shrink:0;
+  }
+  .enchant-left .card{margin:0 0 14px}
   .enchant-left .result-card{display:none!important}
-  .enchant-left .calc-btn{margin:0 0 12px;width:100%}
+  .enchant-left .calc-btn{margin:0 0 14px;width:100%}
   .enchant-left .error-msg{padding:0}
   .enchant-right{
     display:flex;flex-direction:column;gap:16px;
-    padding:24px 32px 24px 28px;
-    overflow-y:auto;
-    height:100%;
+    width:340px;flex-shrink:0;
+    position:sticky;top:40px;
   }
   .enchant-right .rate-table{margin:0}
   .result-panel-desktop{display:flex!important;flex-direction:column;gap:0}
@@ -229,79 +224,79 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
   .app-header{padding:16px 32px 14px}
   .app-header-icon{font-size:28px}
   .app-header-title{font-size:20px}
-  .app-header-sub{font-size:10px;margin-top:3px}
+  .app-header-sub{font-size:11px;margin-top:3px}
 
   /* Tab bar */
-  .tab-btn{padding:16px 32px;font-size:13px;letter-spacing:.12em}
+  .tab-btn{padding:16px 32px;font-size:15px;letter-spacing:.12em}
 
   /* Cards & fields */
-  .card{border-radius:12px;margin:0 0 12px}
-  .card-header{font-size:10px;padding:10px 18px 9px;letter-spacing:.2em}
-  .field{padding:12px 18px}
-  .field-label{font-size:14px}
-  .field-sub{font-size:10px;margin-top:2px}
+  .card{border-radius:12px;margin:0 0 14px}
+  .card-header{font-size:13px;padding:14px 22px 12px;letter-spacing:.18em}
+  .field{padding:16px 22px}
+  .field-label{font-size:18px}
+  .field-sub{font-size:13px;margin-top:3px}
 
   /* Toggle */
-  .toggle{width:46px;height:26px}
-  .toggle-track{border-radius:13px}
-  .toggle-thumb{width:20px;height:20px}
-  .toggle input:checked~.toggle-thumb{left:22px}
+  .toggle{width:52px;height:28px}
+  .toggle-track{border-radius:14px}
+  .toggle-thumb{width:22px;height:22px}
+  .toggle input:checked~.toggle-thumb{left:26px}
 
   /* Inputs */
-  .gold-input{font-size:15px;padding:10px 14px;border-radius:9px}
-  .input-wrap{padding:11px 18px}
-  .input-label{font-size:10px;margin-bottom:6px}
-  .holy-expand.open{padding:0}
+  .gold-input{font-size:18px;padding:13px 16px;border-radius:10px}
+  .input-wrap{padding:14px 22px}
+  .input-label{font-size:13px;margin-bottom:8px}
 
   /* Seg & level buttons */
-  .seg-group{padding:12px 18px;gap:8px}
-  .seg-btn{padding:10px;font-size:13px;border-radius:9px}
-  .lvl-group{padding:12px 18px;gap:10px}
-  .lvl-btn{padding:14px 4px;font-size:20px;border-radius:9px}
+  .seg-group{padding:14px 22px;gap:10px}
+  .seg-btn{padding:14px;font-size:17px;border-radius:10px}
+  .lvl-group{padding:14px 22px;gap:12px}
+  .lvl-btn{padding:18px 4px;font-size:24px;border-radius:10px}
 
   /* Calc button */
-  .calc-btn{padding:16px;font-size:15px;border-radius:10px;letter-spacing:.12em}
+  .calc-btn{padding:18px;font-size:18px;border-radius:12px;letter-spacing:.12em}
 
-  .result-main-desktop{padding:24px 24px 20px}
-  .result-eyebrow{font-size:9px;margin-bottom:8px}
-  .result-number-desktop{font-size:44px}
-  .result-unit-desktop{font-size:16px}
-  .result-tags-desktop{margin-top:12px;gap:5px}
-  .result-tags-desktop .tag{font-size:9px;padding:4px 10px}
-  .result-meta-desktop{font-size:12px;margin-top:12px;line-height:1.7}
+  /* Error */
+  .error-msg{font-size:15px}
 
-  /* Rate table — desktop */
+  /* Result desktop */
+  .result-main-desktop{padding:28px 28px 24px}
+  .result-eyebrow{font-size:12px;margin-bottom:10px}
+  .result-number-desktop{font-size:52px}
+  .result-unit-desktop{font-size:20px}
+  .result-tags-desktop{margin-top:14px;gap:6px}
+  .result-tags-desktop .tag{font-size:12px;padding:5px 12px}
+  .result-meta-desktop{font-size:15px;margin-top:14px;line-height:1.8}
+
+  /* Rate table */
   .rate-table{border-radius:12px;background:var(--card2)}
-  .rate-table-header{grid-template-columns:60px 1fr 1fr 1fr;padding:9px 18px;font-size:9px}
-  .rate-row{grid-template-columns:60px 1fr 1fr 1fr;padding:10px 18px;font-size:13px}
-  .lvl-badge{font-size:15px}
-  .pity-val{color:var(--gold);opacity:.7;font-size:11px}
-  .status{font-size:10px}
+  .rate-table-header{grid-template-columns:70px 1fr 1fr 1fr;padding:12px 22px;font-size:13px}
+  .rate-row{grid-template-columns:70px 1fr 1fr 1fr;padding:14px 22px;font-size:18px}
+  .lvl-badge{font-size:20px}
+  .pity-val{color:var(--gold);opacity:.7;font-size:15px}
+  .status{font-size:13px}
 
-  /* Reroll page desktop sizing (layout defined in standalone block below) */
-  .rr-cats{padding:16px 20px;gap:10px}
-  .cat-btn{padding:10px 20px;font-size:13px;border-radius:10px}
-  .class-filter{padding:0 20px 14px;gap:10px}
-  .cls-btn{padding:7px 16px;font-size:12px;border-radius:8px}
-
-  .item-entry{padding:14px 20px}
-  .item-name{font-size:15px}
-  .item-cls-tags{margin-top:5px}
-  .cls-tag{font-size:10px;padding:3px 8px}
+  /* Reroll page */
+  .rr-cats{padding:18px 24px 12px;gap:10px}
+  .cat-btn{padding:12px 22px;font-size:16px;border-radius:10px}
+  .class-filter{padding:0 24px 14px;gap:10px}
+  .cls-btn{padding:9px 18px;font-size:14px;border-radius:8px}
+  .item-entry{padding:16px 22px}
+  .item-name{font-size:18px}
+  .item-cls-tags{margin-top:6px}
+  .cls-tag{font-size:12px;padding:4px 10px}
 
   /* Stat cards (reroll detail) */
-  .stat-card{border-radius:12px;margin-bottom:12px}
-  .stat-card-header{padding:10px 16px}
-  .stat-name{font-size:13px}
-  .stat-count{font-size:11px}
-  .roll-row{grid-template-columns:44px 1fr 76px;gap:12px;padding:8px 16px}
-  .roll-val{font-size:13px}
-  .roll-bar-wrap{height:6px}
-  .roll-bar{border-radius:3px}
-  .roll-rate{font-size:13px;font-weight:500}
-  .roll-rate.high{font-size:13px}
-  .reroll-item-title{font-size:20px;margin-bottom:6px}
-  .reroll-item-classes{gap:8px;margin-bottom:6px}
+  .stat-card{border-radius:12px;margin-bottom:20px}
+  .stat-card-header{padding:16px 22px}
+  .stat-name{font-size:18px}
+  .stat-count{font-size:14px}
+  .roll-row{grid-template-columns:64px 1fr 100px;gap:16px;padding:13px 22px}
+  .roll-val{font-size:18px}
+  .roll-bar-wrap{height:8px}
+  .roll-bar{border-radius:4px}
+  .reroll-item-title{font-size:28px;margin-bottom:8px}
+  .reroll-item-classes{gap:10px;margin-bottom:6px}
 
   /* Damage page */
   .dtype-scroll{padding:16px 28px;gap:10px}
@@ -389,6 +384,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .roll-rate.high{color:var(--gold2)}
 
 /* Mobile: detail slide-up sheet */
+@media(min-width:641px){
+  /* Force reroll sizes over mobile base styles */
+  .cat-btn{font-size:16px!important;padding:12px 22px!important}
+  .cls-btn{font-size:14px!important;padding:9px 18px!important}
+  .item-entry{padding:16px 22px!important}
+  .item-name{font-size:18px!important}
+  .stat-card{margin-bottom:20px!important}
+  .stat-card-header{padding:16px 22px!important}
+  .stat-name{font-size:18px!important}
+  .roll-row{grid-template-columns:64px 1fr 100px!important;gap:10px!important;padding:8px 22px!important}
+  .roll-val{font-size:18px!important}
+  .roll-rate{font-size:17px!important;font-weight:600!important}
+  .roll-rate.high{font-size:17px!important}
+  .roll-bar-wrap{height:7px!important}
+  .stat-count{font-size:14px!important}
+  .reroll-item-title{font-size:28px!important}
+  /* Force damage table header/cell sizes */
+  .dmg-table th{font-size:16px!important;padding:14px 20px!important;letter-spacing:.08em!important}
+  .dmg-table td{font-size:20px!important;padding:16px 20px!important}
+}
 .detail-sheet{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);background:var(--bg);padding-top:var(--safe-top)}
 .detail-sheet.open{transform:translateY(0)}
 .detail-sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 8px;flex-shrink:0}
