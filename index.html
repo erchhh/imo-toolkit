@@ -449,6 +449,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
   width:90px;max-width:90px;
   overflow:hidden;text-overflow:ellipsis;
   font-size:10px;padding:7px 8px;
+  z-index:1;
 }
 @media(min-width:641px){
   .dmg-table td.weapon-name{font-size:22px!important;font-weight:700;width:260px!important;max-width:none!important;overflow:visible!important;padding:16px 20px!important}
@@ -457,7 +458,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .dmg-table tr:hover td{background:rgba(255,255,255,.02)}
 .dmg-table tr:hover td.weapon-name{background:rgba(255,255,255,.03)}
 .dmg-table tr.highlighted td{background:rgba(212,153,46,.12)!important}
-.dmg-table tr.highlighted td.weapon-name{background:rgba(212,153,46,.18)!important;color:var(--gold2);font-weight:600}
+.dmg-table tr.highlighted td.weapon-name{background:rgba(30,36,55,.95)!important;color:var(--gold2);font-weight:600;border-right-color:var(--gold)!important}
 .dmg-table tr.highlighted td{color:var(--text)}
 </style>
 </head>
