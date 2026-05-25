@@ -363,7 +363,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .item-entry.selected{background:rgba(200,146,42,.1);border-left:3px solid var(--gold)}
 .item-name{font-size:13px;color:var(--text)}
 .item-cls-tags{display:flex;gap:4px;margin-top:4px}
-.cls-tag{font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;font-family:var(--mono)}
+.cls-tag{font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;font-family:var(--mono);display:inline-flex;align-items:center;line-height:1}
 .cls-w{background:rgba(220,80,80,.25);color:#f09898;border:1px solid rgba(220,80,80,.35)}
 .cls-r{background:rgba(60,200,100,.2);color:#80e898;border:1px solid rgba(60,200,100,.35)}
 .cls-m{background:rgba(80,140,240,.25);color:#90c0ff;border:1px solid rgba(80,140,240,.35)}
@@ -420,7 +420,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .reroll-item-title{font-family:var(--serif);font-size:18px;color:var(--gold2);font-weight:600;margin-bottom:4px}
 .reroll-item-classes{display:flex;gap:6px;margin-bottom:4px}
 .item-meta{display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap}
-.item-meta-pill{font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.07em;font-family:var(--mono);background:var(--surface);color:var(--text);border:1px solid var(--border2);font-weight:600}
+.item-cls-tags{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.item-meta-pill{font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.07em;font-family:var(--mono);background:var(--surface);color:var(--text);border:1px solid var(--border2);font-weight:600;display:inline-flex;align-items:center;line-height:1}
 .item-meta-pill.lvl{color:var(--gold2);border-color:rgba(240,192,80,.3);background:rgba(240,192,80,.08)}
 .item-meta-pill.arm{color:#c0c8d8;border-color:rgba(192,200,216,.3);background:rgba(192,200,216,.08)}
 @media(min-width:641px){
@@ -1039,7 +1040,7 @@ function applyHash() {
 
 
 function renderDetail(item){
-  const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}" style="font-size:13px;padding:4px 10px">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
+  const clsTags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`).join('');
   const lvlPill=item.lvl?`<span class="item-meta-pill lvl">Lv${item.lvl}</span>`:'';
   const armPill=item.armor!=null?`<span class="item-meta-pill arm">${item.armor} ARMOR</span>`:'';
   let html=`<div class="reroll-item-title">${item.name}</div>
@@ -1084,7 +1085,7 @@ function buildItemList(){
     el.className='item-entry';
     const tags=(item.classes||[]).map(c=>`<span class="cls-tag ${CLS_CSS[c]}">${CLS_LABEL[c]}</span>`).join('');
     const lvlPill=item.lvl?`<span class="item-meta-pill lvl">Lv${item.lvl}</span>`:'';
-    el.innerHTML=`<div class="item-name">${item.name}</div><div class="item-meta">${lvlPill}<div class="item-cls-tags">${tags}</div></div>`;
+    el.innerHTML=`<div class="item-name">${item.name}</div><div class="item-meta">${lvlPill}${tags}</div>`;
     el.addEventListener('click',()=>{
       document.querySelectorAll('.item-entry').forEach(e=>e.classList.remove('selected'));
       el.classList.add('selected');
