@@ -467,7 +467,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .dmg-table tr:last-child td{border-bottom:none}
 .dmg-table tr:hover td{background:rgba(255,255,255,.02)}
 .dmg-table tr:hover td.weapon-name{background:rgba(255,255,255,.03)}
-.dmg-table tr.highlighted td{background:rgba(212,153,46,.12)!important}
+.dmg-table td.armor-highlighted{background:rgba(212,153,46,.18)!important;color:var(--gold2)!important;font-weight:700}
+.dmg-table td.inc-1{color:var(--dim)}
+.dmg-table td.inc-2{background:rgba(80,120,200,.12);color:#9ab0e8}
+.dmg-table td.inc-3{background:rgba(80,160,180,.16);color:#80d0e0}
+.dmg-table td.inc-4{background:rgba(80,180,120,.16);color:#70d890}
+.dmg-table td.inc-5{background:rgba(160,200,80,.16);color:#c0e060}
+.dmg-table td.inc-6plus{background:rgba(220,160,60,.16);color:#e8c060}
+.dmg-table th.armor-highlighted{background:rgba(212,153,46,.25)!important;color:var(--gold2)!important}
 .dmg-table tr.highlighted td.weapon-name{background:rgba(30,36,55,.95)!important;color:var(--gold2);font-weight:600;border-right-color:var(--gold)!important}
 .dmg-table tr.highlighted td{color:var(--text)}
 </style>
@@ -489,6 +496,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
     <button class="tab-btn active" data-page="enchant">⚔ Enchant Calculator</button>
     <button class="tab-btn" data-page="reroll">🎲 Reroll Rates</button>
     <button class="tab-btn" data-page="damage">💥 Weapon Damage</button>
+    <button class="tab-btn" data-page="armor">🛡 Armor Chart</button>
   </div>
 
   <!-- Pages -->
@@ -617,6 +625,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
       </div>
     </div>
 
+    <!-- ── Armor Chart ── -->
+    <div class="page" id="page-armor">
+      <div class="dtype-scroll">
+        <span style="font-family:var(--mono);font-size:13px;color:var(--dim);padding:6px 0;align-self:center;letter-spacing:.06em;text-transform:uppercase">Defense vs Power-Up Level</span>
+      </div>
+      <div class="dmg-table-wrap">
+        <table class="dmg-table" id="armor-table">
+          <thead id="armor-thead"></thead>
+          <tbody id="armor-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /pages -->
 
   <!-- Bottom nav (mobile) -->
@@ -624,6 +645,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
     <button class="nav-btn active" data-page="enchant"><span class="nav-icon">⚔</span><span>Enchant</span></button>
     <button class="nav-btn" data-page="reroll"><span class="nav-icon">🎲</span><span>Reroll</span></button>
     <button class="nav-btn" data-page="damage"><span class="nav-icon">💥</span><span>Damage</span></button>
+    <button class="nav-btn" data-page="armor"><span class="nav-icon">🛡</span><span>Armor</span></button>
   </nav>
 
 </div><!-- /app -->
@@ -1326,7 +1348,15 @@ function renderDamage(dtype){
     set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
     tr.innerHTML=cells;
     tr.style.cursor='pointer';
-    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
+    tr.addEventListener('click',()=>{
+      const wasHighlighted = tr.classList.contains('highlighted');
+      // Clear all highlights
+      tbody.querySelectorAll('tr.highlighted').forEach(r => r.classList.remove('highlighted'));
+      thead.querySelectorAll('th.armor-highlighted').forEach(h => h.classList.remove('armor-highlighted'));
+      if (!wasHighlighted) {
+        tr.classList.add('highlighted');
+      }
+    });
     tbody.appendChild(tr);
   });
 }
@@ -1342,6 +1372,56 @@ document.querySelectorAll('.dtype-btn').forEach(btn=>{
 
 buildItemList();
 renderDamage('swords');
+
+// ── Armor Chart ───────────────────────────────────────────────────────────────
+// armorValue(base, powerUp) from the wiki table
+// Pattern: first 5 power-ups add ceil(base/10) each, next 5 add ceil(base/5) each
+function armorValue(base, pu) {
+  const inc1 = Math.ceil(base / 10);
+  const inc2 = Math.ceil(base / 5);
+  if (pu <= 5) return base + pu * inc1;
+  return base + 5 * inc1 + (pu - 5) * inc2;
+}
+
+function buildArmorTable() {
+  const thead = document.getElementById('armor-thead');
+  const tbody = document.getElementById('armor-tbody');
+  const cols = [0,1,2,3,4,5,6,7,8,9,10];
+
+  // Header
+  let hrow = '<tr><th class="weapon-col">Base Armor</th>';
+  cols.forEach(c => { hrow += `<th>+${c}</th>`; });
+  thead.innerHTML = hrow + '</tr>';
+
+  // Rows for 1–30 Armor
+  let html = '';
+  for (let base = 1; base <= 30; base++) {
+    html += `<tr data-base="${base}"><td class="weapon-name">${base} Armor</td>`;
+    cols.forEach((pu, ci) => {
+      const val = armorValue(base, pu);
+      const prev = pu > 0 ? armorValue(base, pu - 1) : null;
+      const inc = prev !== null ? val - prev : 0;
+      let cls = '';
+      if (inc === 1) cls = 'inc-1';
+      else if (inc === 2) cls = 'inc-2';
+      else if (inc === 3) cls = 'inc-3';
+      else if (inc === 4) cls = 'inc-4';
+      else if (inc === 5) cls = 'inc-5';
+      else if (inc >= 6) cls = 'inc-6plus';
+      html += `<td data-row="${base}" data-col="${ci}"${cls ? ` class="${cls}"` : ''}>${val}</td>`;
+    });
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+
+  // Click to highlight row + col header (same as weapon damage row highlight)
+  tbody.querySelectorAll('tr[data-base]').forEach(tr => {
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', () => tr.classList.toggle('highlighted'));
+  });
+}
+
+buildArmorTable();
 // Apply hash routing — must run after buildItemList and renderDamage
 applyHash();
 if(!location.hash) history.replaceState(null,'','#enchant');
