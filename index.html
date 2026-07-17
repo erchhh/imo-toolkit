@@ -1153,6 +1153,12 @@ function switchPage(page){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('[data-page="'+page+'"]').forEach(b=>b.classList.add('active'));
   if (page === 'damage') { renderDamage(currentDtype); history.replaceState(null, '', `#damage/${currentDtype}`); }
+  else if (page === 'armor') {
+    // Clear any lingering damage highlights
+    document.querySelectorAll('#armor-tbody tr.highlighted').forEach(r => r.classList.remove('highlighted'));
+    history.replaceState(null, '', '#armor');
+  }
+  else if (page !== 'reroll') history.replaceState(null, '', '#enchant');
   else if (page === 'reroll') { buildItemList(); setHash(currentCat, currentCls, null); }
   else if (page === 'enchant') { history.replaceState(null, '', '#enchant'); }
 }
