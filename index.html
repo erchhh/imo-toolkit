@@ -475,8 +475,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .dmg-table td.inc-5{background:rgba(160,200,80,.16);color:#c0e060}
 .dmg-table td.inc-6plus{background:rgba(220,160,60,.16);color:#e8c060}
 .dmg-table th.armor-highlighted{background:rgba(212,153,46,.25)!important;color:var(--gold2)!important}
-.dmg-table tr.highlighted td.weapon-name{background:rgba(30,36,55,.95)!important;color:var(--gold2);font-weight:600;border-right-color:var(--gold)!important}
-.dmg-table tr.highlighted td{color:var(--text)}
+.dmg-table tr.highlighted td{background:rgba(212,153,46,.15)!important;color:var(--gold2)!important}
+.dmg-table tr.highlighted td.weapon-name{background:rgba(212,153,46,.25)!important;color:var(--gold2)!important;font-weight:700;border-right-color:var(--gold)!important}
 </style>
 </head>
 <body>
@@ -1348,15 +1348,7 @@ function renderDamage(dtype){
     set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
     tr.innerHTML=cells;
     tr.style.cursor='pointer';
-    tr.addEventListener('click',()=>{
-      const wasHighlighted = tr.classList.contains('highlighted');
-      // Clear all highlights
-      tbody.querySelectorAll('tr.highlighted').forEach(r => r.classList.remove('highlighted'));
-      thead.querySelectorAll('th.armor-highlighted').forEach(h => h.classList.remove('armor-highlighted'));
-      if (!wasHighlighted) {
-        tr.classList.add('highlighted');
-      }
-    });
+    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
     tbody.appendChild(tr);
   });
 }
