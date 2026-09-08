@@ -1124,6 +1124,33 @@ function setHash(cat, cls, itemName) {
   if (itemName) hash += `/${itemName.replace(/ /g, "_")}`;
   history.replaceState(null, '', hash);
 }
+let currentDtype='swords';
+function dmgMax(v){
+  if(typeof v==='number')return v;
+  const s=String(v);if(!s||s==='0')return 0;
+  return parseFloat(s.split('-').pop())||0;
+}
+function renderDamage(dtype){
+  currentDtype=dtype;
+  const set=DAMAGE_DATA[dtype];
+  document.getElementById('dmg-note').textContent=set.note?'※ '+set.note:'';
+  const thead=document.getElementById('dmg-thead');
+  let hrow='<tr><th class="weapon-col">Weapon</th>';
+  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">+${c}</th>`;});
+  thead.innerHTML=hrow+'</tr>';
+  const tbody=document.getElementById('dmg-tbody');
+  tbody.innerHTML='';
+  set.items.forEach(item=>{
+    const tr=document.createElement('tr');
+    let cells=`<td class="weapon-name">${item.name}</td>`;
+    set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
+    tr.innerHTML=cells;
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
+    tbody.appendChild(tr);
+  });
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
 
 // ── Nav ──
@@ -1325,32 +1352,6 @@ window.copyLink = function(url, btn) {
 };
 
 // ── Damage ──
-let currentDtype='swords';
-function dmgMax(v){
-  if(typeof v==='number')return v;
-  const s=String(v);if(!s||s==='0')return 0;
-  return parseFloat(s.split('-').pop())||0;
-}
-function renderDamage(dtype){
-  currentDtype=dtype;
-  const set=DAMAGE_DATA[dtype];
-  document.getElementById('dmg-note').textContent=set.note?'※ '+set.note:'';
-  const thead=document.getElementById('dmg-thead');
-  let hrow='<tr><th class="weapon-col">Weapon</th>';
-  set.cols.forEach(c=>{const risky=c>=(set.riskyFrom||7);hrow+=`<th class="${risky?'risky':''}">+${c}</th>`;});
-  thead.innerHTML=hrow+'</tr>';
-  const tbody=document.getElementById('dmg-tbody');
-  tbody.innerHTML='';
-  set.items.forEach(item=>{
-    const tr=document.createElement('tr');
-    let cells=`<td class="weapon-name">${item.name}</td>`;
-    set.cols.forEach(c=>{cells+=`<td>${String(item.dmg[c])}</td>`;});
-    tr.innerHTML=cells;
-    tr.style.cursor='pointer';
-    tr.addEventListener('click',()=>tr.classList.toggle('highlighted'));
-    tbody.appendChild(tr);
-  });
-}
 document.querySelectorAll('.dtype-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     currentDtype=btn.dataset.dtype;
